@@ -1,33 +1,51 @@
-const urlApi = "https://dummyjson.com/products?limit=30";
-
+let skip = 0;
+const limit = 10;
+let pagina = 1;
+let filtros = {};
 
 document.addEventListener("DOMContentLoaded", () => {
 
     if (document.getElementById("contenedor-productos")) {
+        cargarCategorias();
         cargarProductos();
         activarBusqueda();
     }
 
-    if (document.getElementById("titulo-detalle")) {
-        cargarDetalleProducto();
+    if (document.getElementById("nombre-producto")) {
+        cargarMasDetallesProducto();
     }
 });
 
-let productosOriginales = [];
+/* =========================
+   CARGAR PRODUCTOS
+========================= */
 
-const cargarProductos = () => {
-    fetch(urlApi)
+function cargarProductos() {
+    let url = `https://dummyjson.com/products?limit=${limit}&skip=${skip}`;
+
+    if (filtros.busqueda) {
+        url = `https://dummyjson.com/products/search?q=${filtros.busqueda}`;
+    }
+
+    if (filtros.categoria) {
+        url = `https://dummyjson.com/products/category/${filtros.categoria}`;
+    }
+
+    fetch(url)
         .then(res => res.json())
         .then(data => {
-            productosOriginales = data.products;
-            mostrarProductos(productosOriginales);
+            mostrarProductos(data.products);
+            document.getElementById("info-pagina").textContent =
+                `Página ${pagina}`;
         })
-        .catch(error => {
-            console.error("Error al cargar productos:", error);
-        });
-};
+        .catch(error => console.error(error));
+}
 
-const mostrarProductos = (productos) => {
+/* =========================
+   MOSTRAR PRODUCTOS
+========================= */
+
+function mostrarProductos(productos) {
     const contenedor = document.getElementById("contenedor-productos");
     contenedor.innerHTML = "";
 
@@ -38,65 +56,143 @@ const mostrarProductos = (productos) => {
         card.innerHTML = `
             <img src="${producto.thumbnail}" alt="${producto.title}">
             <h3 class="titulo-producto">${producto.title}</h3>
+            <p>$${producto.price}</p>
+
+            <div class="acciones">
+                <button onclick="editarProducto(${producto.id}, '${producto.title.replace(/'/g, "\\'")}', ${producto.price}, event)">
+                    Editar
+                </button>
+                <button onclick="eliminarProducto(${producto.id}, event)">
+                    Eliminar
+                </button>
+            </div>
         `;
 
         card.addEventListener("click", () => {
-            window.location.href = `detalle.html?id=${producto.id}`;
+            window.location.href = `mas-detalles.html?id=${producto.id}`;
         });
 
         contenedor.appendChild(card);
     });
-};
+}
 
-const activarBusqueda = () => {
+/* =========================
+   PAGINACIÓN
+========================= */
+
+function paginaSiguiente() {
+    skip += limit;
+    pagina++;
+    cargarProductos();
+}
+
+function paginaAnterior() {
+    if (skip > 0) {
+        skip -= limit;
+        pagina--;
+        cargarProductos();
+    }
+}
+
+/* =========================
+   BÚSQUEDA
+========================= */
+
+function activarBusqueda() {
     const input = document.getElementById("input-busqueda");
-    if (!input) return;
 
-    input.addEventListener("input", () => {
-        const texto = input.value.toLowerCase();
-        const filtrados = productosOriginales.filter(p =>
-            p.title.toLowerCase().includes(texto)
-        );
-        mostrarProductos(filtrados);
+    input.addEventListener("change", () => {
+        filtros = { busqueda: input.value };
+        skip = 0;
+        pagina = 1;
+        cargarProductos();
     });
-};
+}
 
-const cargarDetalleProducto = () => {
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get("id");
+/* =========================
+   CATEGORÍAS
+========================= */
 
-    if (!id) return;
-
-    fetch(`https://dummyjson.com/products/${id}`)
+function cargarCategorias() {
+    fetch("https://dummyjson.com/products/category-list")
         .then(res => res.json())
-        .then(producto => {
-            document.getElementById("titulo-detalle").textContent = producto.title;
-            document.getElementById("imagen-detalle").src = producto.thumbnail;
-            document.getElementById("categoria-detalle").textContent =
-                `Categoría: ${producto.category}`;
-            document.getElementById("precio-detalle").textContent =
-                `Precio: $${producto.price}`;
-            document.getElementById("rating-detalle").textContent =
-                `Rating: ${producto.rating}`;
-        })
+        .then(data => {
+            const select = document.getElementById("select-categoria");
+            select.innerHTML = `<option value="">Todas las categorías</option>`;
 
-        .catch(error => {
-            console.error("Error al cargar detalle:", error);
+            data.forEach(cat => {
+                select.innerHTML += `<option value="${cat}">${cat}</option>`;
+            });
+
+            select.addEventListener("change", () => {
+                filtros = select.value ? { categoria: select.value } : {};
+                skip = 0;
+                pagina = 1;
+                cargarProductos();
+            });
         });
-};
-const activarBotonMasDetalles = () => {
-    const btn = document.getElementById("btn-mas-detalles");
-    if (!btn) return;
+}
 
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get("id");
+/* =========================
+   EDITAR PRODUCTO (PUT)
+========================= */
 
-    btn.addEventListener("click", () => {
-        window.location.href = `mas-detalles.html?id=${id}`;
-    });
-};
+function editarProducto(id, tituloActual, precioActual, e) {
+    e.stopPropagation();
 
-const cargarMasDetallesProducto = () => {
+    const nuevoTitulo = prompt("Nuevo título:", tituloActual);
+    if (!nuevoTitulo) return;
+
+    const nuevoPrecio = prompt("Nuevo precio:", precioActual);
+    if (!nuevoPrecio || isNaN(nuevoPrecio)) {
+        alert("Precio inválido");
+        return;
+    }
+
+    fetch(`https://dummyjson.com/products/${id}`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            title: nuevoTitulo,
+            price: Number(nuevoPrecio)
+        })
+    })
+        .then(res => res.json())
+        .then(() => {
+            alert("Producto actualizado correctamente (simulado)");
+            cargarProductos();
+        })
+        .catch(error => {
+            console.error(error);
+            alert("Error al editar producto");
+        });
+}
+
+/* =========================
+   ELIMINAR PRODUCTO (DELETE)
+========================= */
+
+function eliminarProducto(id, e) {
+    e.stopPropagation();
+
+    if (!confirm("¿Eliminar producto?")) return;
+
+    fetch(`https://dummyjson.com/products/${id}`, {
+        method: "DELETE"
+    })
+        .then(() => {
+            alert("Producto eliminado (simulado)");
+            cargarProductos();
+        });
+}
+
+/* =========================
+   MÁS DETALLES
+========================= */
+
+function cargarMasDetallesProducto() {
     const params = new URLSearchParams(window.location.search);
     const id = params.get("id");
 
@@ -105,44 +201,11 @@ const cargarMasDetallesProducto = () => {
     fetch(`https://dummyjson.com/products/${id}`)
         .then(res => res.json())
         .then(producto => {
-
             document.getElementById("nombre-producto").textContent = producto.title;
             document.getElementById("imagen-producto").src = producto.thumbnail;
             document.getElementById("descripcion-producto").textContent =
                 `Descripción: ${producto.description}`;
             document.getElementById("marca-producto").textContent =
                 `Marca: ${producto.brand}`;
-
-            const listaOpiniones = document.getElementById("opiniones-producto");
-            listaOpiniones.innerHTML = "";
-
-            if (producto.reviews && producto.reviews.length > 0) {
-                producto.reviews.forEach(review => {
-                    const li = document.createElement("li");
-                    li.innerHTML = `
-                        <strong>${review.reviewerName}</strong>: 
-                        ${review.comment}
-                        `;
-                    listaOpiniones.appendChild(li);
-                });
-            } else {
-                const li = document.createElement("li");
-                li.textContent = "Este producto no tiene opiniones.";
-                listaOpiniones.appendChild(li);
-            }
-        })
-        .catch(error => {
-            console.error("Error al cargar los detalles del producto:", error);
         });
-};
-
-
-if (document.getElementById("btn-mas-detalles")) {
-    activarBotonMasDetalles();
 }
-
-if (document.getElementById("nombre-producto")) {
-    cargarMasDetallesProducto();
-}
-
-
