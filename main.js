@@ -16,9 +16,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-/* =========================
-   CARGAR PRODUCTOS
-========================= */
 
 function cargarProductos() {
     let url = `https://dummyjson.com/products?limit=${limit}&skip=${skip}`;
@@ -40,10 +37,6 @@ function cargarProductos() {
         })
         .catch(error => console.error(error));
 }
-
-/* =========================
-   MOSTRAR PRODUCTOS
-========================= */
 
 function mostrarProductos(productos) {
     const contenedor = document.getElementById("contenedor-productos");
@@ -76,9 +69,6 @@ function mostrarProductos(productos) {
     });
 }
 
-/* =========================
-   PAGINACIÓN
-========================= */
 
 function paginaSiguiente() {
     skip += limit;
@@ -94,9 +84,7 @@ function paginaAnterior() {
     }
 }
 
-/* =========================
-   BÚSQUEDA
-========================= */
+
 
 function activarBusqueda() {
     const input = document.getElementById("input-busqueda");
@@ -109,9 +97,6 @@ function activarBusqueda() {
     });
 }
 
-/* =========================
-   CATEGORÍAS
-========================= */
 
 function cargarCategorias() {
     fetch("https://dummyjson.com/products/category-list")
@@ -133,9 +118,6 @@ function cargarCategorias() {
         });
 }
 
-/* =========================
-   EDITAR PRODUCTO (PUT)
-========================= */
 
 function editarProducto(id, tituloActual, precioActual, e) {
     e.stopPropagation();
@@ -170,9 +152,6 @@ function editarProducto(id, tituloActual, precioActual, e) {
         });
 }
 
-/* =========================
-   ELIMINAR PRODUCTO (DELETE)
-========================= */
 
 function eliminarProducto(id, e) {
     e.stopPropagation();
@@ -188,9 +167,6 @@ function eliminarProducto(id, e) {
         });
 }
 
-/* =========================
-   MÁS DETALLES
-========================= */
 
 function cargarMasDetallesProducto() {
     const params = new URLSearchParams(window.location.search);
